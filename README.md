@@ -1,5 +1,5 @@
 # ged
-Simple tool for diffing excel workbooks.
+Ged, short for git excel diffing tool, is a tool used for diffing two excel workbooks.
 
 ## Installation
 Download the `gedInstaller_<version number>.exe` run the installer and then add
@@ -10,7 +10,7 @@ ged to the system path. The default install location is `C:\Program Files (x86)\
 ```
 ged <excelfilename>.xlsx
 ```
-This will generate a diff file called `<excelfilename>-diff.html` that will show
+This will generate a html file called `<excelfilename>-diff.html` that will show
 the differences between the local file and the one on the default branch. Open
 this diff.html file in a web browser and view the differences between the two excel files.
 
