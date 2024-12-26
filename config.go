@@ -24,18 +24,18 @@ func readConfg() gedConfig {
 	var userConfig gedConfig
 	configBytes, err := os.ReadFile(configFileLocation)
 	if err != nil {
-        fmt.Printf("WARNING: Unable to read config file...\n")
-        userConfig.DefaultCommit = "origin/main"
-        return userConfig
+		fmt.Printf("WARNING: Unable to read config file...\n")
+		userConfig.DefaultCommit = "origin/main"
+		return userConfig
 	}
 
 	err = json.NewDecoder(bytes.NewBuffer(configBytes)).Decode(&userConfig)
 
-    if err != nil {
-        fmt.Printf("WARNING: Unable to read json config...\n")
-        userConfig.DefaultCommit = "origin/main"
-        return userConfig
-    }
+	if err != nil {
+		fmt.Printf("WARNING: Unable to read json config...\n")
+		userConfig.DefaultCommit = "origin/main"
+		return userConfig
+	}
 
 	return userConfig
 }
@@ -54,8 +54,8 @@ func updateConfigFile(newConfig gedConfig) {
 func checkConfigFileExists() {
 	configDir, err := stringGetConfigDir()
 	if err != nil {
-        fmt.Printf("WARNING: Error getting config dir...\n")
-        return
+		fmt.Printf("WARNING: Error getting config dir...\n")
+		return
 	}
 
 	configFileLocation = filepath.Join(configDir, "gedConfig.json")
@@ -67,8 +67,8 @@ func checkConfigFileExists() {
 		os.Mkdir(configDir, 0700)
 		configFile, err := os.Create(configFileLocation)
 		if err != nil {
-            fmt.Printf("WARNING: Unable to create config file. Aborting...\n")
-            return
+			fmt.Printf("WARNING: Unable to create config file. Aborting...\n")
+			return
 		}
 
 		defer func() {
@@ -80,15 +80,15 @@ func checkConfigFileExists() {
 		jsonData, err := json.MarshalIndent(defaultConfig, "", "    ")
 
 		if err != nil {
-            fmt.Printf("WARNING: Unable to create json data...\n")
-            return
+			fmt.Printf("WARNING: Unable to create json data...\n")
+			return
 		}
 
-        fmt.Printf("Creating new config file: %s\n", configFileLocation)
+		fmt.Printf("Creating new config file: %s\n", configFileLocation)
 		fmt.Printf("Default Config: %s \n", jsonData)
 		_, err = configFile.Write(jsonData)
 		if err != nil {
-            fmt.Printf("WARNING: Unable to write to config file...\n")
+			fmt.Printf("WARNING: Unable to write to config file...\n")
 		}
 
 	}

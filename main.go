@@ -15,7 +15,6 @@ import (
 
 const VERSION = "0.2.4"
 
-
 var verboseOutput bool
 var sheetsMine []string
 var sheetsTheirs []string
@@ -27,7 +26,7 @@ func usageMessage() {
 
 // allow user to define .xlsx sheet, theirs version and primary key
 func main() {
-    userConfig := getConfig()
+	userConfig := getConfig()
 	var commitFlag = flag.String("c", userConfig.DefaultCommit, "Commit to compare against")
 	var keyFlag = flag.String("k", "", "The primary key to be used for diffing the excel sheet")
 	var otherFileNameFlag = flag.String("r", "", "The path to the remote file starting from the root of the git repo. This should only be used if a comparing to a file of a different name on the remote commit.")
@@ -36,7 +35,7 @@ func main() {
 	var smartCompareOffFlag = flag.Bool("sco", false, "Tells ged to turn of smart compare and ignore primary keys")
 	var verboseFlag = flag.Bool("v", false, "Display verbose output")
 	var aboutFlag = flag.Bool("about", false, "Display about page for ged")
-    var newDefaultCommit = flag.String("setDefaultCommit", "", "Sets the default commit")
+	var newDefaultCommit = flag.String("setDefaultCommit", "", "Sets the default commit")
 
 	flag.Usage = usageMessage
 	flag.Parse()
@@ -49,11 +48,11 @@ func main() {
 
 	verboseOutput = *verboseFlag
 
-    if *newDefaultCommit != "" {
-        userConfig.DefaultCommit = *newDefaultCommit
-        updateConfigFile(userConfig)
-        os.Exit(0)
-    }
+	if *newDefaultCommit != "" {
+		userConfig.DefaultCommit = *newDefaultCommit
+		updateConfigFile(userConfig)
+		os.Exit(0)
+	}
 
 	if len(flag.Args()) != 1 {
 		fmt.Printf("Error: Incorrect number of positional arguments.\n")
@@ -148,17 +147,17 @@ func main() {
 	}
 
 	primaryKey := *keyFlag
-    primaryKeyList := []string{}
+	primaryKeyList := []string{}
 	if primaryKey != "" {
 		fmt.Printf("Using primary key: %s\n", primaryKey)
-        primaryKeyList = append(primaryKeyList, primaryKey)
-    }
+		primaryKeyList = append(primaryKeyList, primaryKey)
+	}
 
-    // check to make sure there is something to compare against
-    if *localCompareFlag == ""  && commit == ""{
-        fmt.Printf("Error: No commit or file to compare against\n")
-        os.Exit(0)
-    }
+	// check to make sure there is something to compare against
+	if *localCompareFlag == "" && commit == "" {
+		fmt.Printf("Error: No commit or file to compare against\n")
+		os.Exit(0)
+	}
 
 	if *localCompareFlag == "" {
 		theirWorkbookFile, err := os.Create(theirWorkBook)

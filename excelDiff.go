@@ -117,15 +117,15 @@ func getSheetFileName(sheet string, mine bool) string {
 }
 
 func sanatizeKeys(rawKeys []string) []string {
-    keys := []string{}
+	keys := []string{}
 
-    for _, key := range rawKeys {
-        if key != "" {
-           keys = append(keys, key)
-        }
-    }
+	for _, key := range rawKeys {
+		if key != "" {
+			keys = append(keys, key)
+		}
+	}
 
-    return keys
+	return keys
 }
 
 func autoFindPrimaryKeyNames(dataMine [][]string, dataTheirs [][]string) []string {
@@ -134,28 +134,28 @@ func autoFindPrimaryKeyNames(dataMine [][]string, dataTheirs [][]string) []strin
 		return []string{}
 	}
 
-    if verboseOutput {
-        fmt.Printf("Selecting from raw keys (%d): %s\n", len(dataMine[0]), dataMine[0])
-    }
+	if verboseOutput {
+		fmt.Printf("Selecting from raw keys (%d): %s\n", len(dataMine[0]), dataMine[0])
+	}
 
-    possibleKeys := sanatizeKeys(dataMine[0])
+	possibleKeys := sanatizeKeys(dataMine[0])
 
-    if verboseOutput {
-        fmt.Printf("Sanitized Keys (%d): %s\n", len(possibleKeys) ,possibleKeys)
-    }
+	if verboseOutput {
+		fmt.Printf("Sanitized Keys (%d): %s\n", len(possibleKeys), possibleKeys)
+	}
 
 	for length := 1; length <= len(possibleKeys); length++ {
 		for _, keys := range combinations.Combinations(possibleKeys, length) {
-            if verboseOutput {
-                fmt.Printf("Trying key Combo: %s\n", keys)
-            }
+			if verboseOutput {
+				fmt.Printf("Trying key Combo: %s\n", keys)
+			}
 			indexesMine := findPrimaryKeyIndexes(dataMine[0], keys)
 			if primaryKeysUnique(dataMine, indexesMine) == nil {
 				indexesTheirs := findPrimaryKeyIndexes(dataTheirs[0], keys)
 				if !reflect.DeepEqual(indexesMine, indexesTheirs) {
-                    if verboseOutput {
-                        fmt.Printf("Indexes not equal\n")
-                    }
+					if verboseOutput {
+						fmt.Printf("Indexes not equal\n")
+					}
 					continue
 				}
 				if primaryKeysUnique(dataTheirs, indexesTheirs) == nil {
@@ -194,9 +194,9 @@ func primaryKeysUnique(data [][]string, keyIndexes []int) error {
 		key := concatKeysData(rowData, keyIndexes)
 		for _, rowData := range data[index+1:] {
 			if key == concatKeysData(rowData, keyIndexes) {
-                if verboseOutput {
-                    fmt.Printf("Keys: %s found multiple times\n", key)
-                }
+				if verboseOutput {
+					fmt.Printf("Keys: %s found multiple times\n", key)
+				}
 				errorString := "key " + key + " found multiple times"
 				return errors.New(errorString)
 			}
