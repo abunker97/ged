@@ -1,4 +1,4 @@
-module austinbunker.com/ged
+module github.com/abunker97/ged
 
 go 1.22.2
 
