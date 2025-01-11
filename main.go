@@ -15,9 +15,12 @@ import (
 
 const VERSION = "0.2.5-alpha"
 
+type CsvSheet struct {
+	sheetName string
+	filePtr   os.File
+}
+
 var verboseOutput bool
-var sheetsMine []string
-var sheetsTheirs []string
 
 func usageMessage() {
 	fmt.Printf("Usage: ged [arguments] <excel workbook>\n")
@@ -214,28 +217,40 @@ func main() {
 	}()
 
 	// write 'mine' sheets to a csv
-	sheetsMine = writeSheetsToCsv(excelMine, true)
+	sheetsMine := writeSheetsToCsv(excelMine, true)
 
 	// write 'theirs' sheets to a csv
-	sheetsTheirs = writeSheetsToCsv(excelTheirs, false)
+	sheetsTheirs := writeSheetsToCsv(excelTheirs, false)
 
 	htmlFile, err := os.Create(outputFilePath)
 	if err != nil {
-		removeFiles(sheetsMine, true)
-		removeFiles(sheetsTheirs, false)
+		removeFiles(sheetsMine)
+		removeFiles(sheetsTheirs)
 		panic(err)
 	}
 
-	combinedSheets := concatSheetNames(sheetsTheirs, sheetsMine)
+	combinedSheets := concatSheetList(sheetsTheirs, sheetsMine)
 
 	for _, sheetName := range combinedSheets {
-		mineFile, err := os.Open(getSheetFileName(sheetName, true))
+		var mineFile *os.File
+
+		mineCsvSheet, err := getCsvFileStruct(sheetName, sheetsMine)
+
+		// need to make a blank file if mine excel workbook doesn't contain the current sheet
 		if err != nil {
-			mineFile, err = os.Create(getSheetFileName(sheetName, true))
+			mineFile, err = os.CreateTemp("", getSheetFileName(sheetName, true))
+			if err != nil {
+				panic(err)
+			}
+			mineNewCsvSheet := CsvSheet{sheetName: sheetName, filePtr: *mineFile}
+			sheetsMine = append(sheetsMine, mineNewCsvSheet)
+		} else {
+			mineFile, err = os.Open(mineCsvSheet.filePtr.Name())
 			if err != nil {
 				panic(err)
 			}
 		}
+
 		csvReaderMine := csv.NewReader(mineFile)
 		dataMine, err := csvReaderMine.ReadAll()
 		if err != nil {
@@ -243,9 +258,20 @@ func main() {
 		}
 		mineFile.Close()
 
-		theirsFile, err := os.Open(getSheetFileName(sheetName, false))
+		var theirsFile *os.File
+
+		theirsCsvSheet, err := getCsvFileStruct(sheetName, sheetsTheirs)
+
+		// need to make a blank file if their excel workbook doesn't contain the current sheet
 		if err != nil {
-			theirsFile, err = os.Create(getSheetFileName(sheetName, false))
+			theirsFile, err = os.CreateTemp("", getSheetFileName(sheetName, false))
+			if err != nil {
+				panic(err)
+			}
+			theirsNewCsvSheet := CsvSheet{sheetName: sheetName, filePtr: *theirsFile}
+			sheetsTheirs = append(sheetsTheirs, theirsNewCsvSheet)
+		} else {
+			theirsFile, err = os.Open(theirsCsvSheet.filePtr.Name())
 			if err != nil {
 				panic(err)
 			}
@@ -264,8 +290,8 @@ func main() {
 	htmlFile.Close()
 
 	// remove temp csv files
-	removeFiles(combinedSheets, true)
-	removeFiles(combinedSheets, false)
+	removeFiles(sheetsMine)
+	removeFiles(sheetsTheirs)
 	if *localCompareFlag == "" {
 		err = os.Remove(theirWorkBook)
 		if err != nil {
