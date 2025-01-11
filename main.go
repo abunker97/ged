@@ -13,7 +13,7 @@ import (
 	"github.com/xuri/excelize/v2"
 )
 
-const VERSION = "0.2.4"
+const VERSION = "0.2.5-alpha"
 
 var verboseOutput bool
 var sheetsMine []string

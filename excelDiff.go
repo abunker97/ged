@@ -27,6 +27,11 @@ type differenceLine struct {
 	linePos  int
 }
 
+type basicCompareRowType struct {
+	row      []string
+	compared bool
+}
+
 // write Sheets to csv
 func writeSheetsToCsv(excelFile *excelize.File, mine bool) []string {
 	excelSheetNames := excelFile.GetSheetList()
@@ -277,33 +282,50 @@ func findMissing(baseList []string, compareList []string) []string {
 	return missingKeys
 }
 
-func rowsToStrings(data [][]string) []string {
-	var rowStrings []string
+func rowsToBasicCompareType(data [][]string) []basicCompareRowType {
+	var basicRows []basicCompareRowType
 
 	for _, row := range data {
-		rowStrings = append(rowStrings, strings.Join(row, " "))
+		basicRow := basicCompareRowType{row: row, compared: false}
+		basicRows = append(basicRows, basicRow)
 	}
 
-	return rowStrings
+	return basicRows
+}
+
+func basicRowContainsRow(data []string, basicRows *[]basicCompareRowType) bool {
+
+	for i, basicRow := range *basicRows {
+		if basicRow.compared == false && reflect.DeepEqual(data, basicRow.row) {
+			(*basicRows)[i].compared = true
+			return true
+		}
+	}
+
+	return false
 }
 
 func findDiffRows(dataTheirs [][]string, dataMine [][]string) ([][]string, [][]string) {
 	var mineDiff [][]string
 	var theirsDiff [][]string
 
-	theirRowStrings := rowsToStrings(dataTheirs)
-	mineRowStrings := rowsToStrings(dataMine)
+	theirBasicRows := rowsToBasicCompareType(dataTheirs)
+	mineBasicRows := rowsToBasicCompareType(dataMine)
+
+	if reflect.DeepEqual(theirBasicRows, mineBasicRows) {
+		return theirsDiff, mineDiff
+	}
 
 	for _, row := range dataTheirs {
-		if !containsString(mineRowStrings, strings.Join(row, " ")) {
+		if !basicRowContainsRow(row, &mineBasicRows) {
 			theirsDiff = append(theirsDiff, row)
 		}
 	}
 
 	for _, row := range dataMine {
-		if !containsString(theirRowStrings, strings.Join(row, " ")) {
-			mineDiff = append(mineDiff, row)
-		}
+        if !basicRowContainsRow(row, &theirBasicRows) {
+            mineDiff = append(mineDiff, row)
+        }
 	}
 
 	return theirsDiff, mineDiff
@@ -350,10 +372,41 @@ func orderAndTypeDiffLines(missingFromTheirs []string, differentKeys []string, d
 	return lineDiffs
 }
 
+func findDuplicateRows(data [][]string) []string {
+	if len(data) == 0 {
+		return []string{}
+	}
+
+	for i := 0; i < len(data); i++ {
+		for j := i + 1; j < len(data); j++ {
+			if reflect.DeepEqual(data[i], data[j]) {
+				return data[i]
+			}
+		}
+	}
+
+	return []string{}
+}
+
 func compareCSV(dataTheirs [][]string, dataMine [][]string, primaryKeys []string, sheetName string, htmlFile *os.File, smartCompare bool) {
 
 	if !smartCompare {
 		fmt.Printf("Smart compare turned off using default diff algorithm for %s\r\n", sheetName)
+	}
+
+	duplicateRowMine := findDuplicateRows(dataMine)
+	duplicateRowTheirs := findDuplicateRows(dataTheirs)
+
+	if smartCompare && len(duplicateRowMine) != 0 {
+		smartCompare = false
+
+		fmt.Printf("WARNING: Found Duplicate Row in my sheet: %s\nRow: %s\n", sheetName, duplicateRowMine)
+	}
+
+	if smartCompare && len(duplicateRowTheirs) != 0 {
+		smartCompare = false
+
+		fmt.Printf("WARNING: Found Duplicate Row in their sheet: %s\nRow: %s\n", sheetName, duplicateRowTheirs)
 	}
 
 	if len(primaryKeys) == 0 && smartCompare {
