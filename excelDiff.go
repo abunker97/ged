@@ -36,13 +36,13 @@ type basicCompareRowType struct {
 func writeSheetsToCsv(excelFile *excelize.File, mine bool) []CsvSheet {
 	excelSheetNames := excelFile.GetSheetList()
 
-    var sheets []CsvSheet
+	var sheets []CsvSheet
 
 	for _, sheet := range excelSheetNames {
 		rows, err := excelFile.GetRows(sheet)
-        var sheetFile CsvSheet
+		var sheetFile CsvSheet
 
-        sheetFile.sheetName = sheet
+		sheetFile.sheetName = sheet
 
 		if err != nil {
 			panic(err)
@@ -58,13 +58,13 @@ func writeSheetsToCsv(excelFile *excelize.File, mine bool) []CsvSheet {
 
 		csvFileName := getSheetFileName(sheet, mine)
 		csvFile, err := os.CreateTemp("", csvFileName)
-        if verboseOutput {
-            fmt.Print("Created File: ", csvFile.Name(), "\n")
-        }
+		if verboseOutput {
+			fmt.Print("Created File: ", csvFile.Name(), "\n")
+		}
 
-        sheetFile.filePtr = *csvFile
+		sheetFile.filePtr = *csvFile
 
-        sheets = append(sheets, sheetFile)
+		sheets = append(sheets, sheetFile)
 
 		if err != nil {
 			panic(err)
@@ -107,13 +107,13 @@ func removeFiles(sheets []CsvSheet) {
 	}
 }
 
-func getCsvFileStruct( sheetName string, sheets []CsvSheet) (CsvSheet, error) {
-    for _, sheet := range sheets {
-        if sheet.sheetName == sheetName {
-            return sheet, nil
-        }
-    }
-    return CsvSheet{}, errors.New("Unable to find File")
+func getCsvFileStruct(sheetName string, sheets []CsvSheet) (CsvSheet, error) {
+	for _, sheet := range sheets {
+		if sheet.sheetName == sheetName {
+			return sheet, nil
+		}
+	}
+	return CsvSheet{}, errors.New("Unable to find File")
 }
 
 func concatSheetList(theirsSheets, mineSheets []CsvSheet) []string {
@@ -390,20 +390,22 @@ func orderAndTypeDiffLines(missingFromTheirs []string, differentKeys []string, d
 	return lineDiffs
 }
 
-func findDuplicateRows(data [][]string) []string {
+func findDuplicateRows(data [][]string) [][]string {
 	if len(data) == 0 {
-		return []string{}
+		return [][]string{}
 	}
+
+	duplicates := [][]string{}
 
 	for i := 0; i < len(data); i++ {
 		for j := i + 1; j < len(data); j++ {
 			if reflect.DeepEqual(data[i], data[j]) {
-				return data[i]
+				duplicates = append(duplicates, data[i])
 			}
 		}
 	}
 
-	return []string{}
+	return duplicates
 }
 
 func compareCSV(dataTheirs [][]string, dataMine [][]string, primaryKeys []string, sheetName string, htmlFile *os.File, smartCompare bool) {
@@ -418,13 +420,19 @@ func compareCSV(dataTheirs [][]string, dataMine [][]string, primaryKeys []string
 	if smartCompare && len(duplicateRowMine) != 0 {
 		smartCompare = false
 
-		fmt.Printf("WARNING: Found Duplicate Row in my sheet: %s\nRow: %s\n", sheetName, duplicateRowMine)
+		fmt.Printf("WARNING: Found Duplicate Row(s) in my sheet: %s. Turning off smart compare.\n", sheetName)
+        for _, row := range duplicateRowMine {
+            fmt.Printf("\tRow: %s\n", row)
+        }
 	}
 
 	if smartCompare && len(duplicateRowTheirs) != 0 {
 		smartCompare = false
 
-		fmt.Printf("WARNING: Found Duplicate Row in their sheet: %s\nRow: %s\n", sheetName, duplicateRowTheirs)
+		fmt.Printf("WARNING: Found Duplicate Row(s) in their sheet: %s. Turning off smart compare.\n", sheetName)
+        for _, row := range duplicateRowTheirs {
+            fmt.Printf("Row: %s\n", row)
+        }
 	}
 
 	if len(primaryKeys) == 0 && smartCompare {
