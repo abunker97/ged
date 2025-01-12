@@ -421,18 +421,18 @@ func compareCSV(dataTheirs [][]string, dataMine [][]string, primaryKeys []string
 		smartCompare = false
 
 		fmt.Printf("WARNING: Found Duplicate Row(s) in my sheet: %s. Turning off smart compare.\n", sheetName)
-        for _, row := range duplicateRowMine {
-            fmt.Printf("\tRow: %s\n", row)
-        }
+		for _, row := range duplicateRowMine {
+			fmt.Printf("\tRow: %s\n", row)
+		}
 	}
 
 	if smartCompare && len(duplicateRowTheirs) != 0 {
 		smartCompare = false
 
 		fmt.Printf("WARNING: Found Duplicate Row(s) in their sheet: %s. Turning off smart compare.\n", sheetName)
-        for _, row := range duplicateRowTheirs {
-            fmt.Printf("Row: %s\n", row)
-        }
+		for _, row := range duplicateRowTheirs {
+			fmt.Printf("\tRow: %s\n", row)
+		}
 	}
 
 	if len(primaryKeys) == 0 && smartCompare {
