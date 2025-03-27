@@ -27,14 +27,23 @@ type differenceLine struct {
 	linePos  int
 }
 
+type basicCompareRowType struct {
+	row      []string
+	compared bool
+}
+
 // write Sheets to csv
-func writeSheetsToCsv(excelFile *excelize.File, mine bool) []string {
+func writeSheetsToCsv(excelFile *excelize.File, mine bool) []CsvSheet {
 	excelSheetNames := excelFile.GetSheetList()
 
-	var sheetNames []string
+	var sheets []CsvSheet
 
 	for _, sheet := range excelSheetNames {
 		rows, err := excelFile.GetRows(sheet)
+		var sheetFile CsvSheet
+
+		sheetFile.sheetName = sheet
+
 		if err != nil {
 			panic(err)
 		}
@@ -47,10 +56,15 @@ func writeSheetsToCsv(excelFile *excelize.File, mine bool) []string {
 			}
 		}
 
-		sheetNames = append(sheetNames, sheet)
-
 		csvFileName := getSheetFileName(sheet, mine)
-		csvFile, err := os.Create(csvFileName)
+		csvFile, err := os.CreateTemp("", csvFileName)
+		if verboseOutput {
+			fmt.Print("Created File: ", csvFile.Name(), "\n")
+		}
+
+		sheetFile.filePtr = *csvFile
+
+		sheets = append(sheets, sheetFile)
 
 		if err != nil {
 			panic(err)
@@ -71,7 +85,7 @@ func writeSheetsToCsv(excelFile *excelize.File, mine bool) []string {
 		csvFile.Close()
 	}
 
-	return sheetNames
+	return sheets
 
 }
 
@@ -84,25 +98,34 @@ func containsString(s []string, e string) bool {
 	return false
 }
 
-func removeFiles(sheets []string, mine bool) {
+func removeFiles(sheets []CsvSheet) {
 	for _, sheet := range sheets {
-		err := os.Remove(getSheetFileName(sheet, mine))
+		err := os.Remove(sheet.filePtr.Name())
 		if err != nil {
 			fmt.Print(err)
 		}
 	}
 }
 
-func concatSheetNames(theirsSheets, mineSheets []string) []string {
+func getCsvFileStruct(sheetName string, sheets []CsvSheet) (CsvSheet, error) {
+	for _, sheet := range sheets {
+		if sheet.sheetName == sheetName {
+			return sheet, nil
+		}
+	}
+	return CsvSheet{}, errors.New("Unable to find File")
+}
+
+func concatSheetList(theirsSheets, mineSheets []CsvSheet) []string {
 	var sheets []string
 
 	for _, sheet := range theirsSheets {
-		sheets = append(sheets, sheet)
+		sheets = append(sheets, sheet.sheetName)
 	}
 
 	for _, sheet := range mineSheets {
-		if !containsString(sheets, sheet) {
-			sheets = append(sheets, sheet)
+		if !containsString(sheets, sheet.sheetName) {
+			sheets = append(sheets, sheet.sheetName)
 		}
 	}
 
@@ -111,9 +134,9 @@ func concatSheetNames(theirsSheets, mineSheets []string) []string {
 
 func getSheetFileName(sheet string, mine bool) string {
 	if mine {
-		return "mine-" + sheet + "-ABdiffTool.csv"
+		return "mine-" + sheet + "-ged.csv"
 	}
-	return "theirs-" + sheet + "-ABdiffTool.csv"
+	return "theirs-" + sheet + "-ged.csv"
 }
 
 func sanatizeKeys(rawKeys []string) []string {
@@ -277,31 +300,48 @@ func findMissing(baseList []string, compareList []string) []string {
 	return missingKeys
 }
 
-func rowsToStrings(data [][]string) []string {
-	var rowStrings []string
+func rowsToBasicCompareType(data [][]string) []basicCompareRowType {
+	var basicRows []basicCompareRowType
 
 	for _, row := range data {
-		rowStrings = append(rowStrings, strings.Join(row, " "))
+		basicRow := basicCompareRowType{row: row, compared: false}
+		basicRows = append(basicRows, basicRow)
 	}
 
-	return rowStrings
+	return basicRows
+}
+
+func basicRowContainsRow(data []string, basicRows *[]basicCompareRowType) bool {
+
+	for i, basicRow := range *basicRows {
+		if basicRow.compared == false && reflect.DeepEqual(data, basicRow.row) {
+			(*basicRows)[i].compared = true
+			return true
+		}
+	}
+
+	return false
 }
 
 func findDiffRows(dataTheirs [][]string, dataMine [][]string) ([][]string, [][]string) {
 	var mineDiff [][]string
 	var theirsDiff [][]string
 
-	theirRowStrings := rowsToStrings(dataTheirs)
-	mineRowStrings := rowsToStrings(dataMine)
+	theirBasicRows := rowsToBasicCompareType(dataTheirs)
+	mineBasicRows := rowsToBasicCompareType(dataMine)
+
+	if reflect.DeepEqual(theirBasicRows, mineBasicRows) {
+		return theirsDiff, mineDiff
+	}
 
 	for _, row := range dataTheirs {
-		if !containsString(mineRowStrings, strings.Join(row, " ")) {
+		if !basicRowContainsRow(row, &mineBasicRows) {
 			theirsDiff = append(theirsDiff, row)
 		}
 	}
 
 	for _, row := range dataMine {
-		if !containsString(theirRowStrings, strings.Join(row, " ")) {
+		if !basicRowContainsRow(row, &theirBasicRows) {
 			mineDiff = append(mineDiff, row)
 		}
 	}
@@ -350,10 +390,49 @@ func orderAndTypeDiffLines(missingFromTheirs []string, differentKeys []string, d
 	return lineDiffs
 }
 
+func findDuplicateRows(data [][]string) [][]string {
+	if len(data) == 0 {
+		return [][]string{}
+	}
+
+	duplicates := [][]string{}
+
+	for i := 0; i < len(data); i++ {
+		for j := i + 1; j < len(data); j++ {
+			if reflect.DeepEqual(data[i], data[j]) {
+				duplicates = append(duplicates, data[i])
+			}
+		}
+	}
+
+	return duplicates
+}
+
 func compareCSV(dataTheirs [][]string, dataMine [][]string, primaryKeys []string, sheetName string, htmlFile *os.File, smartCompare bool) {
 
 	if !smartCompare {
 		fmt.Printf("Smart compare turned off using default diff algorithm for %s\r\n", sheetName)
+	}
+
+	duplicateRowMine := findDuplicateRows(dataMine)
+	duplicateRowTheirs := findDuplicateRows(dataTheirs)
+
+	if smartCompare && len(duplicateRowMine) != 0 {
+		smartCompare = false
+
+		fmt.Printf("WARNING: Found Duplicate Row(s) in my sheet: %s. Turning off smart compare.\n", sheetName)
+		for _, row := range duplicateRowMine {
+			fmt.Printf("\tRow: %s\n", row)
+		}
+	}
+
+	if smartCompare && len(duplicateRowTheirs) != 0 {
+		smartCompare = false
+
+		fmt.Printf("WARNING: Found Duplicate Row(s) in their sheet: %s. Turning off smart compare.\n", sheetName)
+		for _, row := range duplicateRowTheirs {
+			fmt.Printf("\tRow: %s\n", row)
+		}
 	}
 
 	if len(primaryKeys) == 0 && smartCompare {

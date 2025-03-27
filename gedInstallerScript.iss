@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "ged"
-#define MyAppVersion "0.2.4"
+#define MyAppVersion "0.2.5"
 #define MyAppPublisher "AB Engineering & Fabrication"
 #define MyAppURL "https://www.austinbunker.com"
 #define MyAppExeName "ged.exe"
